@@ -1,25 +1,17 @@
 from fastapi import FastAPI, HTTPException, Query
 import requests
-import os
 from typing import Optional
-from dotenv import load_dotenv
 
-# بارگذاری متغیرهای محیطی (در حالت لوکال)
-load_dotenv()
+# ✅ هاردکد کردن کلید API (فقط برای تست – امن نیست برای تولید!)
+AVE_API_KEY = "ytuy8mznKhFmJWyMzEV7YsoaYoHrgLHxB30xOl1gycoGfmezc3eq4KdR9nb136Vc"
 
-# بارگذاری کلید API از متغیر محیطی
-AVE_API_KEY = os.getenv("AVE_API_KEY")
-if not AVE_API_KEY or AVE_API_KEY.strip() == "":
-    raise RuntimeError("❌ AVE_API_KEY is not set or is empty. Please check Railway Variables.")
-
-# تنظیم اپلیکیشن FastAPI
+# ✅ Base settings
 app = FastAPI(
     title="AveAI API",
     description="Unofficial wrapper for Ave.ai v2 endpoints",
     version="1.0.0"
 )
 
-# تنظیمات عمومی API
 BASE_URL = "https://prod.ave-api.com/v2"
 HEADERS = {
     "X-API-KEY": AVE_API_KEY,
@@ -27,98 +19,51 @@ HEADERS = {
     "User-Agent": "AveAI-Wrapper"
 }
 
-# روت اصلی
+# ✅ Root endpoint
 @app.get("/")
 def home():
     return {
         "status": "✅ AveAI API is running",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "debug": "🔐 API Key is hardcoded for test"
     }
 
-# جستجوی توکن
+# ✅ Utility function
+def fetch_ave(endpoint: str, params: Optional[dict] = None):
+    try:
+        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ✅ Endpoint: Search Tokens
 @app.get("/tokens/search")
-def search_tokens(keyword: str = Query(..., description="Search keyword")):
-    endpoint = "/tokens/search"
-    try:
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS, params={"keyword": keyword})
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+def search_token(keyword: str):
+    return fetch_ave("/tokens/search", {"keyword": keyword})
 
-# اطلاعات توکن با address
-@app.get("/tokens/{address}")
-def get_token(address: str):
-    endpoint = f"/tokens/{address}"
-    try:
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# لیست توکن‌های ترند
+# ✅ Endpoint: Trending Tokens
 @app.get("/tokens/trending")
-def get_trending_tokens():
-    endpoint = "/tokens/trending"
-    try:
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+def trending_tokens():
+    return fetch_ave("/tokens/trending")
 
-# اطلاعات Socialها
-@app.get("/tokens/{address}/social")
-def get_token_social(address: str):
-    endpoint = f"/tokens/{address}/social"
-    try:
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# ✅ Endpoint: Token Info by Address
+@app.get("/token/{address}")
+def token_info(address: str):
+    return fetch_ave(f"/token/{address}")
 
-# اطلاعات تراکنش‌ها
-@app.get("/tokens/{address}/transactions")
-def get_token_transactions(address: str, limit: int = 20):
-    endpoint = f"/tokens/{address}/transactions"
-    try:
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS, params={"limit": limit})
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# ✅ Endpoint: Token Holders
+@app.get("/token/{address}/holders")
+def token_holders(address: str, page: int = 1, limit: int = 10):
+    return fetch_ave(f"/token/{address}/holders", {"page": page, "limit": limit})
 
-# هولدرهای توکن
-@app.get("/tokens/{address}/holders")
-def get_token_holders(address: str, limit: int = 25):
-    endpoint = f"/tokens/{address}/holders"
-    try:
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS, params={"limit": limit})
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# ✅ Endpoint: Token Transfers
+@app.get("/token/{address}/transfers")
+def token_transfers(address: str, page: int = 1, limit: int = 10):
+    return fetch_ave(f"/token/{address}/transfers", {"page": page, "limit": limit})
 
-# رویدادهای توکن
-@app.get("/tokens/{address}/events")
-def get_token_events(address: str, limit: int = 10):
-    endpoint = f"/tokens/{address}/events"
-    try:
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS, params={"limit": limit})
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# اطلاعات dex
-@app.get("/tokens/{address}/dex")
-def get_token_dex(address: str):
-    endpoint = f"/tokens/{address}/dex"
-    try:
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=HEADERS)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# ✅ Endpoint: Token Anomalies
+@app.get("/token/{address}/anomalies")
+def token_anomalies(address: str):
+    return fetch_ave(f"/token/{address}/anomalies")
