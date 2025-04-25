@@ -2,10 +2,8 @@ from fastapi import FastAPI, HTTPException, Query
 import requests
 import os
 from typing import Optional
-from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
 AVE_API_KEY = os.getenv("AVE_API_KEY")
 if not AVE_API_KEY:
     raise RuntimeError("❌ AVE_API_KEY is not set. Please check your .env file.")
