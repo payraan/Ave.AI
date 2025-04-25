@@ -9,8 +9,8 @@ load_dotenv()
 
 # بارگذاری کلید API از متغیر محیطی
 AVE_API_KEY = os.getenv("AVE_API_KEY")
-if not AVE_API_KEY:
-    raise RuntimeError("❌ AVE_API_KEY is not set. Please check Railway Variables.")
+if not AVE_API_KEY or AVE_API_KEY.strip() == "":
+    raise RuntimeError("❌ AVE_API_KEY is not set or is empty. Please check Railway Variables.")
 
 # تنظیم اپلیکیشن FastAPI
 app = FastAPI(
