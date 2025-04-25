@@ -67,3 +67,64 @@ def token_transfers(address: str, page: int = 1, limit: int = 10):
 @app.get("/token/{address}/anomalies")
 def token_anomalies(address: str):
     return fetch_ave(f"/token/{address}/anomalies")
+
+# ✅ Get Token Prices
+@app.post("/tokens/price")
+def get_token_prices(payload: Dict[str, Any] = Body(...)):
+    return fetch_ave("/tokens/price", method="POST", data=payload)
+
+# ✅ Get Token Topics
+@app.get("/ranks/topics")
+def get_rank_topics():
+    return fetch_ave("/ranks/topics")
+
+# ✅ Get Token List By Topic
+@app.get("/ranks")
+def get_tokens_by_topic(topic: str):
+    return fetch_ave("/ranks", {"topic": topic})
+
+# ✅ Get Token Details (by token-id)
+@app.get("/tokens/{token_id}")
+def get_token_details(token_id: str):
+    return fetch_ave(f"/tokens/{token_id}")
+
+# ✅ Get Pair Kline Data
+@app.get("/klines/pair/{pair_id}")
+def get_pair_kline(pair_id: str):
+    return fetch_ave(f"/klines/pair/{pair_id}")
+
+# ✅ Get Token Kline Data
+@app.get("/klines/token/{token_id}")
+def get_token_kline(token_id: str):
+    return fetch_ave(f"/klines/token/{token_id}")
+
+# ✅ Get Token Top100 Holders
+@app.get("/tokens/top100/{token_id}")
+def get_token_top_holders(token_id: str):
+    return fetch_ave(f"/tokens/top100/{token_id}")
+
+# ✅ Get Pair Txs
+@app.get("/txs/{pair_id}")
+def get_pair_transactions(pair_id: str):
+    return fetch_ave(f"/txs/{pair_id}")
+
+# ✅ Get Supported Chains
+@app.get("/supported_chains")
+def get_supported_chains():
+    return fetch_ave("/supported_chains")
+
+# ✅ Get Chain Main Tokens
+@app.get("/tokens/main")
+def get_chain_main_tokens(chain: str):
+    return fetch_ave("/tokens/main", {"chain": chain})
+
+# ✅ Get Chain Trending List
+@app.get("/tokens/trending_by_chain")
+def get_trending_by_chain(chain: str):
+    return fetch_ave("/tokens/trending", {"chain": chain})
+
+# ✅ Contract Risk Detection
+@app.get("/contracts/{token_id}")
+def get_contract_risk(token_id: str):
+    return fetch_ave(f"/contracts/{token_id}")
+
