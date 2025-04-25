@@ -7,5 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Run the FastAPI app on port 8290
+# اطمینان از اینکه Railway از ENV استفاده کنه
+ENV PORT=8290
+
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8290"]
