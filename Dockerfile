@@ -23,6 +23,5 @@ CMD echo "Starting service..." && \
     echo "Checking environment:" && \
     echo "PORT=$PORT" && \
     echo "AVE_API_KEY exists: $(if [ -n \"$AVE_API_KEY\" ]; then echo true; else echo false; fi)" && \
-    if [ -z "$AVE_API_KEY" ]; then echo "❌ ERROR: AVE_API_KEY environment variable is not set!"; exit 1; fi && \
     echo "Starting uvicorn..." && \
     uvicorn main:app --host 0.0.0.0 --port $PORT
