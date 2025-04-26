@@ -1,13 +1,18 @@
 from fastapi import FastAPI, HTTPException, Query, Depends
 import aiohttp
 import logging
+import os
+from dotenv import load_dotenv
 from typing import Optional, List, Dict, Any, Union
 
 # تنظیم لاگینگ برای مشاهده خطاهای دقیق
 logging.basicConfig(level=logging.DEBUG)
 
-# 🔐 کلید API به‌صورت هاردکد برای تست
-AVE_API_KEY = "mspSf2Ai4AmgfY6qZ1B3hXEZaiM5o2tvAAA6zc5yB0ptGyxnjz841GBiHAivx8xl"
+# بارگذاری متغیرهای محیطی
+load_dotenv()
+
+# 🔐 کلید API از متغیر محیطی یا مقدار پیش‌فرض
+AVE_API_KEY = os.getenv("AVE_API_KEY", "mspSf2Ai4AmgfY6qZ1B3hXEZaiM5o2tvAAA6zc5yB0ptGyxnjz841GBiHAivx8xl")
 
 # تنظیمات اولیه
 app = FastAPI(
