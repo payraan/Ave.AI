@@ -176,6 +176,19 @@ async def get_token_holders(
         return response["data"][:limit_int]
     return response
 
+@app.get("/contracts/{token_id}", tags=["Risk Analysis"])
+async def get_contract_risk_detection(token_id: str):
+    """
+    Get contract risk detection report for a token.
+    Format: {token}-{chain}, e.g., 0x05ea8779...baefd-bsc
+    """
+    response = await fetch_ave(f"/contracts/{token_id}")
+    
+    # استخراج داده‌ها از پاسخ
+    if isinstance(response, dict) and "data" in response:
+        return response["data"]
+    return response
+
 # جمع‌آوری اطلاعات توکن در یک درخواست
 @app.get("/token_info/{token_id}", tags=["Comprehensive"])
 async def get_token_info(
@@ -185,7 +198,7 @@ async def get_token_info(
     chart_interval: int = Query(1440, description="Chart interval in seconds")
 ):
     """
-    Get comprehensive token information including details, chart data and top holders in a single request.
+    Get comprehensive token information including details, chart data, risk analysis and top holders in a single request.
     All data is limited for optimal processing by AI assistants.
     Format: {token}-{chain}
     """
@@ -211,24 +224,16 @@ async def get_token_info(
         limit_int = int(holder_limit.value)
         holders = holders_response["data"][:limit_int]
     
+    # دریافت اطلاعات ریسک قرارداد
+    risk_response = await fetch_ave(f"/contracts/{token_id}")
+    risk_data = {}
+    if isinstance(risk_response, dict) and "data" in risk_response:
+        risk_data = risk_response["data"]
+    
     # ترکیب همه اطلاعات در یک پاسخ
     return {
         "token_details": token_details,
         "chart_data": chart_data,
-        "top_holders": holders
+        "top_holders": holders,
         "risk_analysis": risk_data
-
     }
-
-@app.get("/contracts/{token_id}", tags=["Risk Analysis"])
-async def get_contract_risk_detection(token_id: str):
-    """
-    Get contract risk detection report for a token.
-    Format: {token}-{chain}, e.g., 0x05ea8779...baefd-bsc
-    """
-    response = await fetch_ave(f"/contracts/{token_id}")
-    
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"]
-    return response
