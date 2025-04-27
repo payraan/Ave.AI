@@ -216,4 +216,19 @@ async def get_token_info(
         "token_details": token_details,
         "chart_data": chart_data,
         "top_holders": holders
+        "risk_analysis": risk_data
+
     }
+
+@app.get("/contracts/{token_id}", tags=["Risk Analysis"])
+async def get_contract_risk_detection(token_id: str):
+    """
+    Get contract risk detection report for a token.
+    Format: {token}-{chain}, e.g., 0x05ea8779...baefd-bsc
+    """
+    response = await fetch_ave(f"/contracts/{token_id}")
+    
+    # استخراج داده‌ها از پاسخ
+    if isinstance(response, dict) and "data" in response:
+        return response["data"]
+    return response
