@@ -1,9 +1,10 @@
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, Path
 import aiohttp
 import logging
 import os
 from dotenv import load_dotenv
 from typing import Optional, List, Dict, Any, Union
+from enum import Enum
 
 # تنظیم لاگینگ برای مشاهده خطاهای دقیق
 logging.basicConfig(level=logging.DEBUG)
@@ -13,6 +14,21 @@ load_dotenv()
 
 # 🔐 کلید API از متغیر محیطی یا مقدار پیش‌فرض
 AVE_API_KEY = os.getenv("AVE_API_KEY", "mspSf2Ai4AmgfY6qZ1B3hXEZaiM5o2tvAAA6zc5yB0ptGyxnjz841GBiHAivx8xl")
+
+# تعریف کلاس Enum برای تعداد هولدرها
+class HolderLimit(str, Enum):
+    top5 = "5"
+    top10 = "10"
+    top20 = "20"
+    top50 = "50"
+    top100 = "100"
+
+# تعریف کلاس Enum برای اندازه داده‌های نمودار
+class ChartSize(int, Enum):
+    small = 5
+    medium = 10
+    large = 20
+    xlarge = 50
 
 # تنظیمات اولیه
 app = FastAPI(
@@ -69,11 +85,12 @@ async def fetch_ave(endpoint: str, params: Optional[dict] = None):
 @app.get("/tokens", tags=["Tokens"])
 async def search_tokens(
     keyword: str = Query(..., description="Token name, symbol or address"),
-    chain: Optional[str] = Query(None, description="Blockchain name (optional)")
+    chain: Optional[str] = Query(None, description="Blockchain name (optional)"),
+    limit: int = Query(10, description="Maximum number of results to return", ge=1, le=50)
 ):
     """
     Search for tokens by name, symbol or contract address.
-    Returns a list of matching tokens.
+    Returns a list of matching tokens with a customizable limit.
     """
     params = {"keyword": keyword}
     if chain:
@@ -81,38 +98,9 @@ async def search_tokens(
     
     response = await fetch_ave("/tokens", params)
     
-    # استخراج داده‌های توکن از پاسخ
+    # استخراج داده‌های توکن از پاسخ و محدود کردن نتایج
     if isinstance(response, dict) and "data" in response:
-        return response["data"]
-    return response
-
-@app.get("/ranks/topics", tags=["Rankings"])
-async def get_rank_topics():
-    """
-    Get available ranking topics that can be used with the /ranks endpoint.
-    """
-    response = await fetch_ave("/ranks/topics")
-    
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        # برگرداندن فقط آیدی‌های موضوعات
-        topics = [topic["id"] for topic in response["data"]]
-        return topics
-    return response
-
-@app.get("/ranks", tags=["Rankings"])
-async def get_tokens_by_topic(
-    topic: str = Query(..., description="Topic name from /ranks/topics")
-):
-    """
-    Get ranked tokens by specified topic.
-    Use /ranks/topics to get available topics.
-    """
-    response = await fetch_ave("/ranks", {"topic": topic})
-    
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"]
+        return response["data"][:limit]
     return response
 
 @app.get("/tokens/{token_id}", tags=["Tokens"])
@@ -132,16 +120,16 @@ async def get_token_details(token_id: str):
 async def get_pair_kline(
     pair_id: str,
     interval: int = Query(60, description="Time interval in seconds (15,30,60,120,240,1440,4320,10080,43200)"),
-    size: int = Query(10, description="Number of records to return"),
+    size: ChartSize = Query(ChartSize.medium, description="Number of records to return"),
     category: str = Query("u", description="Category type (u for USD, b for base token)")
 ):
     """
-    Get k-line (candlestick) data for a trading pair.
+    Get k-line (candlestick) data for a trading pair with customizable size.
     Format: {pair}-{chain}
     """
     response = await fetch_ave(f"/klines/pair/{pair_id}", {
         "interval": interval,
-        "size": size,
+        "size": int(size),
         "category": category
     })
     
@@ -154,15 +142,15 @@ async def get_pair_kline(
 async def get_token_kline(
     token_id: str,
     interval: int = Query(60, description="Time interval in seconds (15,30,60,120,240,1440,4320,10080,43200)"),
-    size: int = Query(10, description="Number of records to return")
+    size: ChartSize = Query(ChartSize.medium, description="Number of records to return")
 ):
     """
-    Get k-line (candlestick) data for a token.
+    Get k-line (candlestick) data for a token with customizable size.
     Format: {token}-{chain}
     """
     response = await fetch_ave(f"/klines/token/{token_id}", {
         "interval": interval,
-        "size": size
+        "size": int(size)
     })
     
     # استخراج داده‌ها از پاسخ
@@ -170,118 +158,62 @@ async def get_token_kline(
         return response["data"]
     return response
 
-@app.get("/tokens/top100/{token_id}", tags=["Token Analytics"])
-async def get_top100(token_id: str):
+@app.get("/tokens/holders/{token_id}", tags=["Token Analytics"])
+async def get_token_holders(
+    token_id: str,
+    limit: HolderLimit = Query(HolderLimit.top20, description="Number of top holders to return")
+):
     """
-    Get top 100 holders of a specific token.
+    Get top holders of a specific token with customizable limit.
     Format: {token}-{chain}
+    Options: 5, 10, 20, 50, or 100 holders
     """
     response = await fetch_ave(f"/tokens/top100/{token_id}")
     
-    # استخراج داده‌ها از پاسخ
+    # استخراج داده‌ها از پاسخ و محدود کردن براساس پارامتر limit
     if isinstance(response, dict) and "data" in response:
-        return response["data"]
+        limit_int = int(limit.value)
+        return response["data"][:limit_int]
     return response
 
-@app.get("/txs/{pair_id}", tags=["Transactions"])
-async def get_pair_txs(
-    pair_id: str,
-    limit: int = Query(10, description="Number of records to return"),
-    to_time: Optional[int] = Query(None, description="Timestamp of latest record")
+# جمع‌آوری اطلاعات توکن در یک درخواست
+@app.get("/token_info/{token_id}", tags=["Comprehensive"])
+async def get_token_info(
+    token_id: str,
+    holder_limit: HolderLimit = Query(HolderLimit.top5, description="Number of top holders to include"),
+    chart_size: ChartSize = Query(ChartSize.small, description="Number of chart points to include"),
+    chart_interval: int = Query(1440, description="Chart interval in seconds")
 ):
     """
-    Get transactions for a specific trading pair.
-    Format: {pair}-{chain}
-    """
-    params = {"limit": limit}
-    if to_time:
-        params["to_time"] = to_time
-    
-    response = await fetch_ave(f"/txs/{pair_id}", params)
-    
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"]
-    return response
-
-@app.get("/supported_chains", tags=["Chains"])
-async def get_supported_chains():
-    """
-    Get list of supported blockchains.
-    """
-    response = await fetch_ave("/supported_chains")
-    
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"]
-    return response
-
-# دریافت لیست روند زنجیره
-@app.get("/chain_trending", tags=["Trending"])
-async def get_chain_trending(
-    chain_name: str = Query(..., description="Chain name to get trending tokens")
-):
-    """
-    Get trending tokens for a specific blockchain.
-    """
-    response = await fetch_ave(f"/tokens/trending", {"chain": chain_name})
-    
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"]
-    return response
-
-# قرارداد ریسک تشخیص گزارش
-@app.get("/contracts/{token_id}", tags=["Risk Analysis"])
-async def get_contract_risk_detection(token_id: str):
-    """
-    Get contract risk detection report for a token.
+    Get comprehensive token information including details, chart data and top holders in a single request.
+    All data is limited for optimal processing by AI assistants.
     Format: {token}-{chain}
     """
-    response = await fetch_ave(f"/contracts/{token_id}")
+    # دریافت اطلاعات اصلی توکن
+    token_details_response = await fetch_ave(f"/tokens/{token_id}")
+    token_details = {}
+    if isinstance(token_details_response, dict) and "data" in token_details_response:
+        token_details = token_details_response["data"]
     
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"]
-    return response
-
-# دریافت توکن‌های اصلی زنجیره
-@app.get("/tokens/main", tags=["Chains"])
-async def get_chain_main_tokens(
-    chain_name: str = Query(..., description="Chain name to get main tokens")
-):
-    """
-    Get chain's main token list.
-    """
-    response = await fetch_ave(f"/tokens/main", {"chain": chain_name})
+    # دریافت داده‌های نمودار
+    chart_response = await fetch_ave(f"/klines/token/{token_id}", {
+        "interval": chart_interval,
+        "size": int(chart_size)
+    })
+    chart_data = {}
+    if isinstance(chart_response, dict) and "data" in chart_response:
+        chart_data = chart_response["data"]
     
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"]
-    return response
-
-# دریافت قیمت توکن
-@app.post("/tokens/price", tags=["Prices"])
-async def get_token_prices(
-    token_ids: List[str] = Query(..., description="List of token IDs (max 200)")
-):
-    """
-    Get token latest prices.
-    Format: Each ID should be {token}-{chain}
-    """
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            f"{BASE_URL}/tokens/price", 
-            headers=HEADERS,
-            json={"token_ids": token_ids}
-        ) as response:
-            if response.status >= 400:
-                error_msg = await response.text()
-                raise HTTPException(status_code=response.status, detail=error_msg)
-            
-            result = await response.json()
-            
-            # استخراج داده‌ها از پاسخ
-            if isinstance(result, dict) and "data" in result:
-                return result["data"]
-            return result
+    # دریافت دارندگان برتر
+    holders_response = await fetch_ave(f"/tokens/top100/{token_id}")
+    holders = []
+    if isinstance(holders_response, dict) and "data" in holders_response:
+        limit_int = int(holder_limit.value)
+        holders = holders_response["data"][:limit_int]
+    
+    # ترکیب همه اطلاعات در یک پاسخ
+    return {
+        "token_details": token_details,
+        "chart_data": chart_data,
+        "top_holders": holders
+    }
