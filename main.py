@@ -86,28 +86,6 @@ async def search_tokens(
         return response["data"]
     return response
 
-# ✨ NEW: نسخه محدود جستجوی توکن برای GPT
-@app.get("/tokens/limited", tags=["GPT Optimized"])
-async def search_tokens_limited(
-    keyword: str = Query(..., description="Token name, symbol or address"),
-    chain: Optional[str] = Query(None, description="Blockchain name (optional)"),
-    limit: int = Query(5, description="Maximum number of results to return")
-):
-    """
-    Search for tokens with limited results (GPT-optimized).
-    Returns a limited list of matching tokens.
-    """
-    params = {"keyword": keyword}
-    if chain:
-        params["chain"] = chain
-    
-    response = await fetch_ave("/tokens", params)
-    
-    # استخراج و محدود کردن داده‌های توکن از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"][:limit]
-    return response
-
 @app.get("/ranks/topics", tags=["Rankings"])
 async def get_rank_topics():
     """
@@ -135,23 +113,6 @@ async def get_tokens_by_topic(
     # استخراج داده‌ها از پاسخ
     if isinstance(response, dict) and "data" in response:
         return response["data"]
-    return response
-
-# ✨ NEW: نسخه محدود رتبه‌بندی برای GPT
-@app.get("/ranks/limited", tags=["GPT Optimized"])
-async def get_tokens_by_topic_limited(
-    topic: str = Query(..., description="Topic name from /ranks/topics"),
-    limit: int = Query(10, description="Maximum number of results to return")
-):
-    """
-    Get ranked tokens by specified topic with limited results (GPT-optimized).
-    Use /ranks/topics to get available topics.
-    """
-    response = await fetch_ave("/ranks", {"topic": topic})
-    
-    # استخراج و محدود کردن داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"][:limit]
     return response
 
 @app.get("/tokens/{token_id}", tags=["Tokens"])
@@ -209,27 +170,6 @@ async def get_token_kline(
         return response["data"]
     return response
 
-# ✨ NEW: نسخه بهینه نمودار توکن برای GPT
-@app.get("/klines/token/limited/{token_id}", tags=["GPT Optimized"])
-async def get_token_kline_limited(
-    token_id: str,
-    interval: int = Query(1440, description="Time interval in seconds (15,30,60,120,240,1440,4320,10080,43200)"),
-    size: int = Query(5, description="Number of records to return (limited for GPT)")
-):
-    """
-    Get limited k-line (candlestick) data for a token (GPT-optimized).
-    Format: {token}-{chain}
-    """
-    response = await fetch_ave(f"/klines/token/{token_id}", {
-        "interval": interval,
-        "size": size
-    })
-    
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"]
-    return response
-
 @app.get("/tokens/top100/{token_id}", tags=["Token Analytics"])
 async def get_top100(token_id: str):
     """
@@ -243,23 +183,6 @@ async def get_top100(token_id: str):
         return response["data"]
     return response
 
-# ✨ NEW: نسخه محدود دارندگان برتر برای GPT
-@app.get("/tokens/top/{token_id}", tags=["GPT Optimized"])
-async def get_top_holders(
-    token_id: str,
-    limit: int = Query(10, description="Number of top holders to return")
-):
-    """
-    Get limited number of top holders of a specific token (GPT-optimized).
-    Format: {token}-{chain}
-    """
-    response = await fetch_ave(f"/tokens/top100/{token_id}")
-    
-    # استخراج و محدود کردن داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"][:limit]
-    return response
-
 @app.get("/txs/{pair_id}", tags=["Transactions"])
 async def get_pair_txs(
     pair_id: str,
@@ -268,28 +191,6 @@ async def get_pair_txs(
 ):
     """
     Get transactions for a specific trading pair.
-    Format: {pair}-{chain}
-    """
-    params = {"limit": limit}
-    if to_time:
-        params["to_time"] = to_time
-    
-    response = await fetch_ave(f"/txs/{pair_id}", params)
-    
-    # استخراج داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"]
-    return response
-
-# ✨ NEW: نسخه محدود تراکنش‌ها برای GPT
-@app.get("/txs/limited/{pair_id}", tags=["GPT Optimized"])
-async def get_pair_txs_limited(
-    pair_id: str,
-    limit: int = Query(5, description="Number of records to return (limited for GPT)"),
-    to_time: Optional[int] = Query(None, description="Timestamp of latest record")
-):
-    """
-    Get limited transactions for a specific trading pair (GPT-optimized).
     Format: {pair}-{chain}
     """
     params = {"limit": limit}
@@ -328,22 +229,6 @@ async def get_chain_trending(
     # استخراج داده‌ها از پاسخ
     if isinstance(response, dict) and "data" in response:
         return response["data"]
-    return response
-
-# ✨ NEW: نسخه محدود توکن‌های روند دار برای GPT
-@app.get("/chain_trending/limited", tags=["GPT Optimized"])
-async def get_chain_trending_limited(
-    chain_name: str = Query(..., description="Chain name to get trending tokens"),
-    limit: int = Query(5, description="Number of trending tokens to return")
-):
-    """
-    Get limited trending tokens for a specific blockchain (GPT-optimized).
-    """
-    response = await fetch_ave(f"/tokens/trending", {"chain": chain_name})
-    
-    # استخراج و محدود کردن داده‌ها از پاسخ
-    if isinstance(response, dict) and "data" in response:
-        return response["data"][:limit]
     return response
 
 # قرارداد ریسک تشخیص گزارش
@@ -400,36 +285,3 @@ async def get_token_prices(
             if isinstance(result, dict) and "data" in result:
                 return result["data"]
             return result
-
-# ✨ NEW: خلاصه جامع توکن برای GPT
-@app.get("/token_summary/{token_id}", tags=["GPT Optimized"])
-async def get_token_summary(token_id: str):
-    """
-    Get comprehensive token summary in a single request (GPT-optimized).
-    Combines basic info, market data, and top 5 holders.
-    Format: {token}-{chain}
-    """
-    # دریافت اطلاعات اصلی توکن
-    token_info_response = await fetch_ave(f"/tokens/{token_id}")
-    token_info = {}
-    if isinstance(token_info_response, dict) and "data" in token_info_response:
-        token_info = token_info_response["data"]
-    
-    # دریافت گزارش ریسک قرارداد
-    contract_risk_response = await fetch_ave(f"/contracts/{token_id}")
-    contract_risk = {}
-    if isinstance(contract_risk_response, dict) and "data" in contract_risk_response:
-        contract_risk = contract_risk_response["data"]
-    
-    # دریافت ۵ دارنده برتر
-    top_holders_response = await fetch_ave(f"/tokens/top100/{token_id}")
-    top_holders = []
-    if isinstance(top_holders_response, dict) and "data" in top_holders_response:
-        top_holders = top_holders_response["data"][:5]  # فقط ۵ دارنده برتر
-    
-    # ترکیب همه اطلاعات در یک پاسخ
-    return {
-        "token_info": token_info,
-        "risk_analysis": contract_risk,
-        "top_holders": top_holders
-    }
